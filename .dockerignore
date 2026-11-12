@@ -1,0 +1,12 @@
+node_modules
+.env
+.env.*
+.local
+outputs
+**/.next
+**/.expo
+**/node_modules
+**/.env
+**/.env.local
+dist
+coverage
