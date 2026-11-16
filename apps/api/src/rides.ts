@@ -236,7 +236,9 @@ export class RideService {
       } catch {
         continue;
       }
-      if (!eligible(route.meters + d.accuracy, ride.distanceMeters)) continue;
+      // GPS accuracy is fractional; round up to keep the pickup limit conservative.
+      if (!eligible(Math.ceil(route.meters + d.accuracy), ride.distanceMeters))
+        continue;
       try {
         await tx(async (s) => {
           await Offer.updateOne(
@@ -345,7 +347,7 @@ export class RideService {
       coords(ride.pickup),
       { allowZero: true },
     );
-    if (!eligible(route.meters + d.accuracy, ride.distanceMeters))
+    if (!eligible(Math.ceil(route.meters + d.accuracy), ride.distanceMeters))
       throw new ConflictException("Hors limite de récupération");
     try {
       await tx(async (s) => {

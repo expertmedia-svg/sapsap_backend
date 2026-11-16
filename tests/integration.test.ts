@@ -557,7 +557,7 @@ test("dépense enregistrée une seule fois et contreparties équilibrées", asyn
   assert.equal(result[0].total, 0);
 });
 
-test("Affectation et acceptation avec précision 82 m, marge du tiers et GPS récent", async () => {
+test("Affectation et acceptation avec précision GPS décimale, marge du tiers et GPS récent", async () => {
   const p = await User.create({
     phone: "+22670008590",
     name: "Test affectation",
@@ -575,7 +575,7 @@ test("Affectation et acceptation avec précision 82 m, marge du tiers et GPS ré
     online: true,
     location: geo({ longitude: -1.65, latitude: 12.4 }),
     locationAt: new Date(),
-    accuracy: 82,
+    accuracy: 82.25,
   });
   await Vehicle.create({
     driverId: d._id,
@@ -632,7 +632,14 @@ test("Affectation et acceptation avec précision 82 m, marge du tiers et GPS ré
     assert.equal(
       await Offer.countDocuments({ rideId: r._id }),
       0,
-      "1960 + 82 dépasse le tiers de 6000",
+      "1960 + 82,25 dépasse le tiers de 6000",
+    );
+    meters = 1918;
+    await matching.dispatch(String(r._id));
+    assert.equal(
+      await Offer.countDocuments({ rideId: r._id }),
+      0,
+      "1918 + 82,25 ne doit pas être arrondi vers le bas pour passer la limite de 2000 m",
     );
     meters = 0;
     await Driver.updateOne({ userId: d._id }, { $set: { accuracy: 101 } });
@@ -644,7 +651,7 @@ test("Affectation et acceptation avec précision 82 m, marge du tiers et GPS ré
     );
     await Driver.updateOne(
       { userId: d._id },
-      { $set: { accuracy: 82, locationAt: new Date(Date.now() - 61000) } },
+      { $set: { accuracy: 82.25, locationAt: new Date(Date.now() - 61000) } },
     );
     await matching.dispatch(String(r._id));
     assert.equal(
@@ -656,11 +663,19 @@ test("Affectation et acceptation avec précision 82 m, marge du tiers et GPS ré
       { userId: d._id },
       { $set: { locationAt: new Date() } },
     );
+    meters = 1917;
     await matching.dispatch(String(r._id));
     assert.equal(
       await Offer.countDocuments({ rideId: r._id, status: "pending" }),
       1,
     );
+    meters = 1918;
+    await assert.rejects(
+      matching.accept(d, String(r._id)),
+      /Hors limite de récupération/,
+      "L’acceptation doit aussi refuser 2000,25 m pour une limite de 2000 m",
+    );
+    meters = 1917;
     const result = await matching.accept(d, String(r._id));
     assert.equal(result.status, "accepted");
     assert.equal(String(result.driverId), String(d._id));
