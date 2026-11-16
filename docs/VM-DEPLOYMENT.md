@@ -12,6 +12,8 @@ Déploiement du 16 novembre 2026 : `https://sapsap.yingr-ai.com`, VM Debian 13 `
 - API Node : `127.0.0.1:4000`, en-têtes de proxy approuvés uniquement depuis la boucle locale.
 - Nginx : site `/etc/nginx/sites-available/sapsap` ; HTTPS et renouvellement Certbot.
 - Applications Flutter compilées : `/var/www/sapsap/passager` et `/var/www/sapsap/chauffeur`.
+- APK Android installables : `/var/www/sapsap/apk`, téléchargement HTTPS sous `/apk/`.
+- Fichiers de test 1.0.1 : `sapsap-passager-1.0.1.apk` et `sapsap-chauffeur-1.0.1.apk`.
 - Page de suivi temporaire : `/var/www/sapsap/suivi.html`, source `infrastructure/suivi.html`.
 
 Les services préexistants sur la VM utilisent leurs propres configurations.
