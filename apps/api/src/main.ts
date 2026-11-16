@@ -86,6 +86,8 @@ export async function start() {
     logger: ["error", "warn"],
     bodyParser: true,
   });
+  if (process.env.TRUST_PROXY === "loopback")
+    app.getHttpAdapter().getInstance().set("trust proxy", "loopback");
   app.use(helmet());
   app.useGlobalFilters(new Errors());
   const allowed = (
@@ -134,7 +136,10 @@ export async function start() {
       .build();
     SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, config));
   }
-  await app.listen(Number(process.env.PORT || 4000), "0.0.0.0");
+  await app.listen(
+    Number(process.env.PORT || 4000),
+    process.env.HOST || "0.0.0.0",
+  );
   const gateway = app.get(RealtimeGateway);
   let busy = false;
   const timer = setInterval(async () => {

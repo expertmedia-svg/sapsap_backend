@@ -66,3 +66,51 @@ docker run --env-file .env -p 4000:4000 sapsap-backend
 ```
 
 Ne jamais versionner `.env`, les clés API, les sessions, les fichiers `.local` ou les données utilisateurs.
+
+## VM et PM2
+
+Installer Node.js 24 et PM2, puis cloner le dépôt sous le compte qui exécutera l'API :
+
+```sh
+git clone https://github.com/expertmedia-svg/sapsap_backend.git
+cd sapsap_backend
+MONGOMS_DISABLE_POSTINSTALL=1 npm ci
+cp .env.example .env
+chmod 600 .env
+```
+
+Configurer `.env` avec les services de la VM avant de démarrer. MongoDB doit être persistant et configuré en replica set ; le serveur temporaire `mongo:local` est réservé au développement. Ne pas exposer MongoDB ou Redis sur Internet.
+
+Pour Nginx sur la même VM, utiliser `HOST=127.0.0.1`, `PORT=4000` et `TRUST_PROXY=loopback`. Adapter le domaine dans `infrastructure/nginx-api.conf.example`, installer ce virtual host sans remplacer les sites existants, puis activer HTTPS. L'API prend ainsi en compte les IP clientes pour ses limites de requêtes. Ajouter les origines exactes des applications web à `ALLOWED_ORIGINS`.
+
+```sh
+npm run build
+npm run migrate
+pm2 start ecosystem.config.cjs
+pm2 save
+pm2 startup
+```
+
+Exécuter ensuite la commande `sudo` affichée par `pm2 startup`. `pm2 save` sauvegarde la liste des processus et le service systemd la restaure après redémarrage de la VM. Le démon PM2 maintient l'API après fermeture du terminal.
+
+```sh
+pm2 status
+pm2 logs sapsap-api --lines 50 --nostream
+curl --fail http://127.0.0.1:4000/health
+curl --fail https://api.example.com/health
+```
+
+Conserver une seule instance PM2 : la diffusion Socket.IO et le traitement des événements ne sont pas encore configurés pour plusieurs instances. La capacité doit être mesurée sur la VM avant une campagne de charge.
+
+Pour mettre à jour un déploiement existant :
+
+```sh
+git pull --ff-only
+MONGOMS_DISABLE_POSTINSTALL=1 npm ci
+npm run build
+npm run migrate
+pm2 restart ecosystem.config.cjs --update-env
+pm2 save
+```
+
+Les applications mobiles doivent être recompilées avec `--dart-define=API_URL=https://api.example.com`. Sur Windows, le projet mobile accepte désormais `-ApiUrl` dans `scripts/run-flutter.ps1`. Le dashboard utilise `NEXT_PUBLIC_API_URL` lors de sa compilation. Remplacer les domaines d'exemple par les adresses vérifiées du déploiement.
