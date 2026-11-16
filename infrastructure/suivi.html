@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>SAPSAP — Suivi temporaire</title>
+<style>
+body{margin:0;background:#f7f8f1;color:#153b2e;font:17px system-ui,sans-serif}main{max-width:540px;margin:48px auto;padding:24px}h1{font-size:30px}article{background:white;border-radius:24px;padding:28px;box-shadow:0 8px 32px #07503910}a{color:#075039}small{color:#596a61}.brand{font-size:32px;font-weight:900;letter-spacing:2px}.badge{display:inline-block;background:#d9f38d;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700}#status{line-height:1.6}
+</style>
+<main>
+<p class="brand">SAPSAP</p>
+<article><span class="badge">PARTAGE TEMPORAIRE</span>
+<h1>Suivez votre proche.</h1>
+<p id="status" role="status">Chargement du suivi…</p>
+<p id="position"></p><p><a id="map" target="_blank" rel="noopener noreferrer" hidden>Voir la position sur la carte</a></p>
+<small id="updated"></small></article>
+</main>
+<script>
+(() => {
+  const token = location.pathname.split('/').filter(Boolean)[1] || '';
+  const status = document.getElementById('status');
+  const position = document.getElementById('position');
+  const map = document.getElementById('map');
+  const updated = document.getElementById('updated');
+  let stopped = false;
+  if (!/^[A-Za-z0-9_-]{20,200}$/.test(token)) {
+    status.textContent = 'Ce lien de suivi est invalide.';
+    return;
+  }
+  async function refresh() {
+    try {
+      const response = await fetch('/shared/' + encodeURIComponent(token), {cache:'no-store', credentials:'omit', referrerPolicy:'no-referrer'});
+      if (response.status === 404) {
+        stopped = true;
+        throw Error('Ce lien a expiré, a été révoqué ou la course est terminée.');
+      }
+      if (!response.ok) throw Error('Suivi momentanément indisponible.');
+      const data = await response.json();
+      const labels = {searching:'Recherche d’un chauffeur', accepted:'Chauffeur en approche', arrived:'Chauffeur sur place', in_progress:'Course en cours'};
+      status.textContent = labels[data.status] || 'Actualisation du trajet';
+      const coordinates = data.location?.coordinates;
+      map.hidden = true;
+      position.textContent = '';
+      updated.textContent = '';
+      if (Array.isArray(coordinates) && coordinates.length === 2 && coordinates.every(Number.isFinite) && Math.abs(coordinates[0]) <= 180 && Math.abs(coordinates[1]) <= 90) {
+        const [longitude, latitude] = coordinates;
+        position.textContent = `Position du chauffeur : ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+        map.href = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`;
+        map.hidden = false;
+        const date = new Date(data.locationAt);
+        if (!Number.isNaN(date.getTime())) updated.textContent = 'Dernière position : ' + date.toLocaleTimeString('fr-FR');
+      }
+    } catch (error) {
+      status.textContent = error.message;
+      position.textContent = '';
+      updated.textContent = '';
+      map.hidden = true;
+    } finally {
+      if (!stopped) setTimeout(refresh, 6000);
+    }
+  }
+  refresh();
+})();
+</script>
+</html>

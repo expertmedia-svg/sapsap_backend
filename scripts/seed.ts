@@ -42,7 +42,7 @@ async function main() {
     await writeFile(".local/admin-mfa.txt", totp.toString(), { mode: 0o600 });
   }
   console.log(
-    "Compte admin local : +22670000001. Provisionnement MFA : .local/admin-mfa.txt. OTP envoyés vers .local/otp.jsonl si mode local activé.",
+    "Compte admin de test : +22670000001. Provisionnement MFA : .local/admin-mfa.txt. En mode local, le code OTP est renseigné dans l’application.",
   );
   await mongoose.disconnect();
 }
